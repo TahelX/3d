@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rainwater Harvesting Model – 3D view</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#eef2f6;--fg:#16202a;--card:rgba(255,255,255,.88);--bd:#c3ccd6;--ac:#1d6fd6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161c;--fg:#e8eef4;--card:rgba(24,32,40,.88);--bd:#34414d;--ac:#5aa2ff}}
+:root[data-theme="dark"]{--bg:#10161c;--fg:#e8eef4;--card:rgba(24,32,40,.88);--bd:#34414d;--ac:#5aa2ff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+#app{position:relative;height:100%}
+#c{position:absolute;inset:0}
+#top{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:6px;flex-wrap:wrap;z-index:3}
+button{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:7px 12px}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.lb{position:absolute;z-index:2;transform:translate(-50%,-50%);width:24px;height:24px;border-radius:50%;background:var(--ac);color:#fff;font-weight:700;text-align:center;line-height:24px;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+#leg{position:absolute;left:8px;bottom:8px;z-index:3;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px 12px;max-width:min(330px,calc(100% - 16px))}
+#leg b{display:block;margin-bottom:4px}
+#leg div{margin:1px 0}
+#leg i{font-style:normal;display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;background:var(--ac);color:#fff;font-size:12px;margin-right:6px}
+#hint{position:absolute;right:10px;bottom:10px;z-index:3;font-size:12px;opacity:.7}
+</style></head><body>
+<div id="app"><div id="c"></div>
+<div id="top"><button id="bC" class="on">Carton</button><button id="bL" class="on">Labels</button><button id="bW" class="on">Water flow</button><button id="bR">Auto-rotate</button><button id="bV">Reset view</button></div>
+<div id="leg"><b>Low-cost rainwater harvesting model</b>
+<div><i>1</i>Roof catchment 30 × 25 cm (1:40)</div><div><i>2</i>Gutter and 2 downpipes</div><div><i>3</i>First-flush chamber</div><div><i>4</i>Filter: sand / gravel / stone</div><div><i>5</i>Underground tank</div><div><i>6</i>Draw-off tap</div><div><i>7</i>Overflow tube and recharge pit</div></div>
+<div id="hint">Drag to rotate · pinch to zoom</div></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const T=THREE,P=(x,y,z)=>new T.Vector3(x,z,-y);
+const scene=new T.Scene(),cam=new T.PerspectiveCamera(40,1,1,2000);
+const ren=new T.WebGLRenderer({antialias:true,alpha:true});ren.setPixelRatio(Math.min(devicePixelRatio,2));
+const host=document.getElementById('c');host.appendChild(ren.domElement);
+const ctl=new T.OrbitControls(cam,ren.domElement);ctl.enableDamping=true;
+function home(){cam.position.copy(P(68,-62,40));ctl.target.copy(P(26,16,-5));ctl.update()}home();
+scene.add(new T.HemisphereLight(0xffffff,0x8a8a8a,.95));const sun=new T.DirectionalLight(0xffffff,.8);sun.position.set(40,90,60);scene.add(sun);
+const mat=(c,o=1)=>new T.MeshStandardMaterial({color:c,transparent:o<1,opacity:o,depthWrite:o>=1,roughness:.6,side:T.DoubleSide});
+const G=new T.Group();scene.add(G);
+function box(x0,x1,y0,y1,z0,z1,c,o=1){const m=new T.Mesh(new T.BoxGeometry(x1-x0,z1-z0,y1-y0),mat(c,o));m.position.copy(P((x0+x1)/2,(y0+y1)/2,(z0+z1)/2));G.add(m);return m}
+function cyl(a,b,r,c,o=1){const A=P(...a),B=P(...b),d=B.clone().sub(A);const m=new T.Mesh(new T.CylinderGeometry(r,r,d.length(),20),mat(c,o));m.position.copy(A.clone().add(B).multiplyScalar(.5));m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());G.add(m)}
+function tube(p,r=.25,c=0x2f7de1){for(let i=0;i<p.length-1;i++)cyl(p[i],p[i+1],r,c)}
+// ground carton 50 x 40 x 18 cm
+const carton=box(0,50,0,40,-18,0,0xb08a5a,.13);
+const edges=new T.LineSegments(new T.EdgesGeometry(carton.geometry),new T.LineBasicMaterial({color:0x8a6a40}));edges.position.copy(carton.position);G.add(edges);
+// house + corrugated roof (1:40) + gutter
+box(3,33,14,39,0,7.5,0xe0d6bd,.75);
+const tilt=Math.atan(1/25);
+for(let i=0;i<30;i++){const m=new T.Mesh(new T.BoxGeometry(.8,.25,25.1),mat(i%2?0xa0794b:0xb48a58));m.position.copy(P(3.5+i,26.5,8.2));m.rotation.x=tilt;G.add(m)}
+box(3,33,12.3,14.1,6.2,6.4,0xdddddd);box(3,33,12.3,12.5,6.2,7.3,0xdddddd);box(3,33,13.9,14.1,6.2,7.3,0xdddddd);
+// downpipes + collector -> first flush -> filter -> tank
+[4.5,31.5].forEach(x=>tube([[x,13.2,6.3],[x,13.2,.8],[x,12,.8]]));
+tube([[4.5,12,.8],[46,12,.8],[46,8,.8],[46,8,-2]]);
+cyl([46,8,-10],[46,8,-1],2.5,0xcc7326,.55);
+tube([[43.5,8,-1.3],[41,8,-1.5],[38,8,-1.5]]);
+cyl([38,8,-7],[38,8,-1],3,0xb3d9f2,.25);
+cyl([38,8,-6.8],[38,8,-5.2],2.9,0x4d4d52);cyl([38,8,-5.2],[38,8,-3.6],2.9,0x8c8c8c);cyl([38,8,-3.6],[38,8,-2],2.9,0xebd18c);
+tube([[35,8,-6.4],[30.5,8,-6.4],[30.5,8,-9.3],[27,8,-9.3]]);
+box(14,28,3,13,-16.5,-8.5,0xb0c4d8,.22);box(14.2,27.8,3.2,12.8,-16.3,-12.1,0x1f6fe0,.6);
+cyl([21,8,-8.5],[21,8,0],.7,0xdddddd);cyl([21,8,0],[21,8,.3],.9,0xd42626);
+tube([[15,8,-9],[13,8,-9],[8.5,8,-9.5]]);
+cyl([6,8,-16.5],[6,8,-8.5],3,0xeeeeee,.35);cyl([6,8,-16.3],[6,8,-9.7],2.9,0x736e66);
+tube([[21,3,-15.7],[21,-.5,-15.7]],.3);cyl([21,-.5,-15.7],[21,-2.5,-15.7],.45,0xd42626);box(20.1,21.9,-1.7,-1.3,-15.3,-14.5,0xd42626);
+// numbered labels
+const pts=[[1,[18,14,8.4]],[2,[4.5,13.2,3]],[3,[46,8,-5]],[4,[38,8,-4]],[5,[21,3,-12]],[6,[21,-2,-15.7]],[7,[6,8,-12]]];
+const lbs=pts.map(([n,p])=>{const d=document.createElement('div');d.className='lb';d.textContent=n;document.getElementById('app').appendChild(d);return{d,v:P(...p)}});
+// water flow particles
+const path=[[4.5,13.2,6.3],[4.5,13.2,.8],[4.5,12,.8],[46,12,.8],[46,8,.8],[46,8,-2],[43.5,8,-1.3],[38,8,-1.5],[38,8,-6.4],[35,8,-6.4],[30.5,8,-6.4],[30.5,8,-9.3],[27,8,-9.3],[21,8,-12]].map(p=>P(...p));
+const over=[[14,8,-9],[8.5,8,-9.5],[6,8,-12]].map(p=>P(...p));
+function mk(n,col){const a=[];for(let i=0;i<n;i++){const s=new T.Mesh(new T.SphereGeometry(.55,10,10),new T.MeshBasicMaterial({color:col}));scene.add(s);a.push(s)}return a}
+const dropsA=mk(18,0x60b0ff),dropsB=mk(7,0x60b0ff);
+function along(pp,t,out){const L=[0];for(let i=1;i<pp.length;i++)L.push(L[i-1]+pp[i].distanceTo(pp[i-1]));const s=(t%1)*L[L.length-1];let i=1;while(i<pp.length-1&&L[i]<s)i++;out.position.lerpVectors(pp[i-1],pp[i],(s-L[i-1])/(L[i]-L[i-1]))}
+// controls
+let showFlow=true;const $=id=>document.getElementById(id);
+function tg(b,f){$(b).onclick=()=>{$(b).classList.toggle('on');f($(b).classList.contains('on'))}}
+tg('bC',v=>{carton.visible=v;edges.visible=v});tg('bL',v=>lbs.forEach(l=>l.d.style.display=v?'':'none'));
+tg('bW',v=>{showFlow=v;[...dropsA,...dropsB].forEach(s=>s.visible=v)});tg('bR',v=>{ctl.autoRotate=v;ctl.autoRotateSpeed=2});$('bV').onclick=home;
+function size(){const w=host.clientWidth,h=host.clientHeight;ren.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
+addEventListener('resize',size);size();
+(function loop(ts){requestAnimationFrame(loop);const t=ts/1000;
+if(showFlow){dropsA.forEach((s,i)=>along(path,t*.09+i/dropsA.length,s));dropsB.forEach((s,i)=>along(over,t*.12+i/dropsB.length,s))}
+ctl.update();ren.render(scene,cam);const w=host.clientWidth,h=host.clientHeight;
+lbs.forEach(l=>{const v=l.v.clone().project(cam);l.d.style.left=((v.x+1)/2*w)+'px';l.d.style.top=((1-v.y)/2*h)+'px'})})(0);
+</script></body></html>
